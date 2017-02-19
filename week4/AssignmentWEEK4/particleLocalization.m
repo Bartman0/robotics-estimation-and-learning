@@ -24,12 +24,15 @@ myPose(:,1) = param.init_pose;
 
 % Decide the number of particles, M.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-M = 500;                       % Please decide a reasonable number of M, 
+M = 4000;                       % Please decide a reasonable number of M, 
                                % based on your experiment using the practice data.
-map_threshold_low = mode(mode(map))-0.2;
+map_threshold_low  = mode(mode(map))-0.01;
 map_threshold_high = mode(mode(map))+0.2;
-resample_threshold = 0.5;
-sigma_m = 0.04 * [ 1; 1; 100 ];
+resample_threshold = 0.8;
+sigma_m = 0.02 * [ 1; 1; 5 ];
+radius = 0.017;
+direction = myPose(3,1);
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Create M number of particles
 P = repmat(myPose(:,1), [1, M]);
@@ -38,19 +41,39 @@ P_corr = zeros(1, M);
 
 for j = 2:N % You will start estimating myPose from j=2 using ranges(:,2).
     % 1) Propagate the particles 
-    P = P + randn(3, M).*sigma_m;
+%     P_estimate = myPose(:,j-1);
+%     P = repmat(P_estimate, [1, M]);
+    % add a random value to the orientation of the pose
+%     P(3,:) = P(3,:) + randn(1,M)*sigma_m(3);
+    P(3,:) = myPose(3,j-1) + randn(1,M)*sigma_m(3);
+    % randomize the radius travelled
+    R = radius * (1+randn(1,M)*sigma_m(1));
+    % calculate new positions
+    P(1,:) = P(1,:) + R.*cos(P(3,:));
+    P(2,:) = P(2,:) - R.*sin(P(3,:));
+%     P = P + randn(3, M).*sigma_m;
+%     W = repmat(1.0/M, [1, M]);
     
     % 2) Measurement Update 
     for i = 1:M
     %   2-1) Find grid cells hit by the rays (in the grid map coordinate frame)
-        lidar_global(:,1) = min(ceil( (ranges(:,j).*cos(scanAngles + P(3,i)) + P(1,i))*myResolution + myOrigin(1)), size(map, 2));
-        lidar_global(:,2) = min(ceil(-(ranges(:,j).*sin(scanAngles + P(3,i)) + P(2,i))*myResolution + myOrigin(2)), size(map, 1));
+        lidar_global(:,1) = ceil(( ranges(:,j).*cos(scanAngles + P(3,i)) + P(1,i))*myResolution + myOrigin(1));
+        lidar_global(:,2) = ceil((-ranges(:,j).*sin(scanAngles + P(3,i)) + P(2,i))*myResolution + myOrigin(2));
         %fprintf('LIDAR max coords (x, y) = %d, %d\n', max(lidar_global(:,1)), max(lidar_global(:,2)));
         
     %   2-2) For each particle, calculate the correlation scores of the particles
+        % for out of range positions, assume the original position on the map, resulting in a low correlation score
+        lidar_global(lidar_global(:,1) < 1, 1) = myOrigin(1);
+        lidar_global(lidar_global(:,1) < 1, 2) = myOrigin(2);
+        lidar_global(lidar_global(:,2) < 1, 1) = myOrigin(1);
+        lidar_global(lidar_global(:,2) < 1, 2) = myOrigin(2);
+        lidar_global(lidar_global(:,1) > size(map,2), 1) = myOrigin(1);
+        lidar_global(lidar_global(:,1) > size(map,2), 2) = myOrigin(2);
+        lidar_global(lidar_global(:,2) > size(map,1), 1) = myOrigin(1);
+        lidar_global(lidar_global(:,2) > size(map,1), 2) = myOrigin(2);
         s2i = sub2ind(size(map), lidar_global(:,2), lidar_global(:,1));
         corr_values = map(s2i);
-        P_corr(i) = -3*sum(corr_values<=map_threshold_low)+2*sum(corr_values>map_threshold_high);
+        P_corr(i) = -3*sum(corr_values<=map_threshold_low)+10*sum(corr_values>=map_threshold_high);
     end
     P_corr = P_corr - min(P_corr);    % make range from 0, inf
     
@@ -59,12 +82,15 @@ for j = 2:N % You will start estimating myPose from j=2 using ranges(:,2).
     W = W / sum(W);
     
     %   2-4) Choose the best particle to update the pose
-    [ value, index ] = max(W);
+    [ value, index ] = max(W);    % simply the one with the largest weight
     myPose(:,j) = P(:,index);
+%     myPose(:,j) = P * W';
+%     myPose(:,j) = P * (W > 1.0/M)' ./ sum(W > 1.0/M);    % the average P based on the weights that are larger than average
     
     % 3) Resample if the effective number of particles is smaller than a threshold
     N_eff = sum(W)^2/sum(W.^2);
     if (N_eff < resample_threshold*M)    % resample if effective size is below threshold%
+        fprintf('step: %d, N_eff: %f =====\n',j, N_eff);
         W_cum = cumsum(W);
         for i = 1:M
             index = find(rand <= W_cum,1);
@@ -76,6 +102,7 @@ for j = 2:N % You will start estimating myPose from j=2 using ranges(:,2).
     end
     
     % 4) Visualize the pose on the map as needed
+    fprintf('step: %d, P: (%f, %f, %f)\n',j, myPose(1,j), myPose(2,j), myPose(3,j));
 end
 
 end
