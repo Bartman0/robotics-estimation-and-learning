@@ -24,11 +24,12 @@ myPose(:,1) = param.init_pose;
 
 % Decide the number of particles, M.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-M = 200;                       % Please decide a reasonable number of M, 
+M = 500;                       % Please decide a reasonable number of M, 
                                % based on your experiment using the practice data.
-map_threshold = mode(mode(map));
+map_threshold_low = mode(mode(map))-0.2;
+map_threshold_high = mode(mode(map))+0.2;
 resample_threshold = 0.5;
-sigma_m = 0.02 * [ 1; 1; 10 ];
+sigma_m = 0.04 * [ 1; 1; 100 ];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Create M number of particles
 P = repmat(myPose(:,1), [1, M]);
@@ -49,7 +50,7 @@ for j = 2:N % You will start estimating myPose from j=2 using ranges(:,2).
     %   2-2) For each particle, calculate the correlation scores of the particles
         s2i = sub2ind(size(map), lidar_global(:,2), lidar_global(:,1));
         corr_values = map(s2i);
-        P_corr(i) = -1*sum(corr_values<=map_threshold)+2*sum(corr_values>map_threshold);
+        P_corr(i) = -3*sum(corr_values<=map_threshold_low)+2*sum(corr_values>map_threshold_high);
     end
     P_corr = P_corr - min(P_corr);    % make range from 0, inf
     
@@ -78,4 +79,3 @@ for j = 2:N % You will start estimating myPose from j=2 using ranges(:,2).
 end
 
 end
-
