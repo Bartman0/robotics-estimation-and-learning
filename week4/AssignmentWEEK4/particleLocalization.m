@@ -24,9 +24,9 @@ myPose(:,1) = param.init_pose;
 
 % Decide the number of particles, M.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-M = 4000;                       % Please decide a reasonable number of M, 
+M = 5000;                       % Please decide a reasonable number of M, 
                                % based on your experiment using the practice data.
-map_threshold_low  = mode(mode(map))-0.01;
+map_threshold_low  = mode(mode(map))-0.2;
 map_threshold_high = mode(mode(map))+0.2;
 resample_threshold = 0.8;
 sigma_m = 0.02 * [ 1; 1; 5 ];
@@ -37,22 +37,26 @@ direction = myPose(3,1);
 % Create M number of particles
 P = repmat(myPose(:,1), [1, M]);
 W = repmat(1.0/M, [1, M]);
-P_corr = zeros(1, M);
 
 for j = 2:N % You will start estimating myPose from j=2 using ranges(:,2).
+    M = ceil(M - j/10);
+    M = max(M, 500);
+    fprintf('step: %d, M: %d\n', j, M);
     % 1) Propagate the particles 
 %     P_estimate = myPose(:,j-1);
 %     P = repmat(P_estimate, [1, M]);
     % add a random value to the orientation of the pose
 %     P(3,:) = P(3,:) + randn(1,M)*sigma_m(3);
-    P(3,:) = myPose(3,j-1) + randn(1,M)*sigma_m(3);
+    P(3,1:M) = myPose(3,j-1) + randn(1,M)*sigma_m(3);
     % randomize the radius travelled
     R = radius * (1+randn(1,M)*sigma_m(1));
     % calculate new positions
-    P(1,:) = P(1,:) + R.*cos(P(3,:));
-    P(2,:) = P(2,:) - R.*sin(P(3,:));
+    P(1,1:M) = P(1,1:M) + R.*cos(P(3,1:M));
+    P(2,1:M) = P(2,1:M) - R.*sin(P(3,1:M));
 %     P = P + randn(3, M).*sigma_m;
 %     W = repmat(1.0/M, [1, M]);
+    
+    P_corr = zeros(1, M);
     
     % 2) Measurement Update 
     for i = 1:M
@@ -78,7 +82,7 @@ for j = 2:N % You will start estimating myPose from j=2 using ranges(:,2).
     P_corr = P_corr - min(P_corr);    % make range from 0, inf
     
     %   2-3) Update the particle weights
-    W = (W .* P_corr) / sum(P_corr);
+    W = (W(1:M) .* P_corr) / sum(P_corr);
     W = W / sum(W);
     
     %   2-4) Choose the best particle to update the pose
