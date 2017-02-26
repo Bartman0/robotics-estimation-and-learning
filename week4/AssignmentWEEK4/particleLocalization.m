@@ -24,13 +24,13 @@ myPose(:,1) = param.init_pose;
 
 % Decide the number of particles, M.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-M = 3000;                       % Please decide a reasonable number of M, 
+M = 200;                       % Please decide a reasonable number of M, 
                                % based on your experiment using the practice data.
 map_threshold_low  = mode(mode(map))-0.2;
 map_threshold_high = mode(mode(map))+0.5;
 resample_threshold = 0.8;
 sigma_m = 0.005 * [ 1; 1; 2 ];
-radius = 0.010;
+radius = 0.015;
 direction = myPose(3,1);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -65,7 +65,7 @@ for j = 2:N % You will start estimating myPose from j=2 using ranges(:,2).
     P(2,1:M) = P(2,1:M) - R.*sin(myPose(3,j-1));
     P(3,1:M) = myPose(3,j-1) + randn(1,M)*sigma_m(3);
 %     P = P + randn(3, M).*sigma_m;
-    W = repmat(1.0/M, [1, M]);    % reset the weights every cycle
+%     W = repmat(1.0/M, [1, M]);    % reset the weights every cycle
     
     P_corr = zeros(1, M);
     
