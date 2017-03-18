@@ -24,13 +24,13 @@ myPose(:,1) = param.init_pose;
 
 % Decide the number of particles, M.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-M = 200;                       % Please decide a reasonable number of M, 
+M = 800;                       % Please decide a reasonable number of M, 
                                % based on your experiment using the practice data.
 map_threshold_low  = mode(mode(map))-0.2;
 map_threshold_high = mode(mode(map))+0.5;
 resample_threshold = 0.8;
-sigma_m = 0.005 * [ 1; 1; 2 ];
-radius = 0.015;
+sigma_m = 0.01 * [ 1; 1; 2 ];
+radius = 0.02;
 direction = myPose(3,1);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -51,21 +51,21 @@ for j = 2:N % You will start estimating myPose from j=2 using ranges(:,2).
 %     M = max(M, 500);
 %     fprintf('step: %d, M: %d\n', j, M);
     % 1) Propagate the particles 
-%     P_estimate = myPose(:,j-1);
-%     P = repmat(P_estimate, [1, M]);
+    P = repmat(myPose(:,j-1), [1, M]);
     % add a random value to the orientation of the pose
 %     P(3,:) = P(3,:) + randn(1,M)*sigma_m(3);
 %     P(3,1:M) = myPose(3,j-1) + randn(1,M)*sigma_m(3);
     % randomize the radius travelled
-    R = radius * (1+randn(1,M)*sigma_m(1));
+%     R = radius * (1+randn(1,M)*sigma_m(1));
+    R = radius;
     % calculate new positions
-%     P(1,1:M) = P(1,1:M) + R.*cos(P(3,1:M));
-%     P(2,1:M) = P(2,1:M) - R.*sin(P(3,1:M));
-    P(1,1:M) = P(1,1:M) + R.*cos(myPose(3,j-1));
-    P(2,1:M) = P(2,1:M) - R.*sin(myPose(3,j-1));
-    P(3,1:M) = myPose(3,j-1) + randn(1,M)*sigma_m(3);
-%     P = P + randn(3, M).*sigma_m;
-%     W = repmat(1.0/M, [1, M]);    % reset the weights every cycle
+    P(1,1:M) = P(1,1:M) + R.*cos(P(3,1:M));
+    P(2,1:M) = P(2,1:M) - R.*sin(P(3,1:M));
+%     P(1,1:M) = P(1,1:M) + R.*cos(myPose(3,j-1));
+%     P(2,1:M) = P(2,1:M) - R.*sin(myPose(3,j-1));
+%     P(3,1:M) = myPose(3,j-1) + randn(1,M)*sigma_m(3);
+    P = P + randn(3, M).*sigma_m;
+    W = repmat(1.0/M, [1, M]);    % reset the weights every cycle
     
     P_corr = zeros(1, M);
     
@@ -108,14 +108,14 @@ for j = 2:N % You will start estimating myPose from j=2 using ranges(:,2).
     if (N_eff < resample_threshold*M)    % resample if effective size is below threshold%
         fprintf('step: %d, N_eff: %f =====\n',j, N_eff);
 %         j = j - 1;
-        W_cum = cumsum(W);
-        for i = 1:M
-            index = find(rand <= W_cum,1);
-            P_update(:,i) = P(:,index);
-            W_update(i) = W(index);
-        end
-        P = P_update;
-        W = W_update;
+%         W_cum = cumsum(W);
+%         for i = 1:M
+%             index = find(rand <= W_cum,1);
+%             P_update(:,i) = P(:,index);
+%             W_update(i) = W(index);
+%         end
+%         P = P_update;
+%         W = W_update;
 %         M = M_prev + 50;    % reset number of samples
     end
     
