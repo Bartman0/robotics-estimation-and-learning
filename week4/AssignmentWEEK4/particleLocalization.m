@@ -24,7 +24,7 @@ myPose(:,1) = param.init_pose;
 
 % Decide the number of particles, M.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-M = 800;                       % Please decide a reasonable number of M, 
+M = 1000;                       % Please decide a reasonable number of M, 
                                % based on your experiment using the practice data.
 map_threshold_low  = mode(mode(map))-0.2;
 map_threshold_high = mode(mode(map))+0.5;
